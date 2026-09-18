@@ -132,6 +132,19 @@
     return card;
   }
 
+  // Her oyunda kartlara farklı bir renk atanır (gerçek tombala setlerindeki
+  // gibi turuncu, mavi, yeşil, mor... kartlar) — sayılar her zaman beyaz
+  // zeminde kalır, sadece BOŞ hücrelerin rengi değişir (bkz. style.css).
+  const CARD_COLORS = ["orange", "blue", "green", "purple", "teal", "rose"];
+  function pickCardColors(playerIds) {
+    const shuffled = shuffle(CARD_COLORS);
+    const assign = {};
+    playerIds.forEach((pid, i) => {
+      assign[pid] = shuffled[i % shuffled.length];
+    });
+    return assign;
+  }
+
   /* ------------------------------------------------------------------ *
    *  3) SES  (WebAudio ile "ding" — dosya gerektirmez, PWA'da da çalışır)
    * ------------------------------------------------------------------ */
@@ -142,21 +155,28 @@
     }
     return audioCtx;
   }
+  // Sayı çağrısı sesi — önceki sürüm çok tiz (880/1320 Hz sine) geliyordu;
+  // daha alçak notalar + hafif bir low-pass filtre ile yumuşak, kulak
+  // tırmalamayan bir "ding" sağlanır.
   function playChime() {
     const ctx = ensureAudio();
     if (!ctx) return;
     const now = ctx.currentTime;
-    [880, 1320].forEach((freq, i) => {
+    [523, 659].forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 2200;
       osc.type = "sine";
       osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, now + i * 0.09);
-      gain.gain.linearRampToValueAtTime(0.16, now + i * 0.09 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.35);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(now + i * 0.09);
-      osc.stop(now + i * 0.09 + 0.4);
+      const t = now + i * 0.1;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.13, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      osc.connect(filter).connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.45);
     });
   }
   // Çinko yapıldığında çalan, sesli okumadan bağımsız, garantili bir ton
@@ -204,12 +224,35 @@
   function speakNumber(n) {
     speakText(numberToTurkish(n));
   }
+  // Bazı tarayıcılarda sesler (voices) sayfa yüklenir yüklenmez hazır
+  // olmayabilir — ilk çağrıda boş liste dönerse 'voiceschanged' olayını
+  // bekleyip Türkçe bir ses bulunduğunda onu kullanırız. Bu, "sayı
+  // seslendirilmiyor" şikayetinin en sık sebebidir.
+  let cachedVoices = [];
+  let voicesReady = false;
+  function primeVoices() {
+    if (!("speechSynthesis" in window)) return;
+    const load = () => {
+      const v = window.speechSynthesis.getVoices();
+      if (v && v.length) { cachedVoices = v; voicesReady = true; }
+    };
+    load();
+    if (!voicesReady) {
+      window.speechSynthesis.addEventListener("voiceschanged", load, { once: false });
+    }
+  }
+  function pickTurkishVoice() {
+    if (!cachedVoices.length) return null;
+    return cachedVoices.find(v => v.lang && v.lang.toLowerCase().startsWith("tr")) || null;
+  }
   function speakText(text) {
     try {
       if (!("speechSynthesis" in window)) return;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "tr-TR";
       u.rate = 0.98;
+      const trVoice = pickTurkishVoice();
+      if (trVoice) u.voice = trVoice;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(u);
     } catch (e) { /* no-op */ }
@@ -459,11 +502,14 @@
       const room = snap.val();
       if (!room || room.ownerId !== myId) return;
       const players = room.players || {};
+      const playerIds = Object.keys(players);
+      const colors = pickCardColors(playerIds);
       const updates = {};
-      Object.keys(players).forEach(pid => {
+      playerIds.forEach(pid => {
         updates[`players/${pid}/card`] = generateCard();
         updates[`players/${pid}/marked`] = {};
         updates[`players/${pid}/rowsCompleted`] = [false, false, false];
+        updates[`players/${pid}/cardColor`] = colors[pid];
       });
       updates["status"] = "playing";
       updates["numberOrder"] = shuffle(Array.from({ length: 90 }, (_, i) => i + 1));
@@ -607,6 +653,9 @@
     const card = me.card;
     const marked = me.marked || {};
     const called = calledNumbersSet(room);
+
+    CARD_COLORS.forEach(c => wrap.classList.remove("card-" + c));
+    if (me.cardColor) wrap.classList.add("card-" + me.cardColor);
 
     const needsBuild = wrap.children.length !== 27;
     if (needsBuild) {
@@ -850,6 +899,9 @@
     const card = winner.card;
     const marked = winner.marked || {};
 
+    CARD_COLORS.forEach(c => wrap.classList.remove("card-" + c));
+    if (winner.cardColor) wrap.classList.add("card-" + winner.cardColor);
+
     if (wrap.children.length !== 27) {
       wrap.innerHTML = "";
       for (let i = 0; i < 27; i++) wrap.appendChild(document.createElement("div"));
@@ -874,6 +926,7 @@
    *  13) BAŞLANGIÇ
    * ------------------------------------------------------------------ */
   showView("lobby");
+  primeVoices();
 
   if (!firebaseReady) {
     setLobbyMsg("⚠️ Firebase ayarları eksik. firebase-config.js dosyasını doldurman gerekiyor (bkz. README.md).", false);
