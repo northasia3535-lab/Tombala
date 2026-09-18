@@ -153,8 +153,48 @@
     if (!audioCtx) {
       try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { /* no-op */ }
     }
+    // Mobil tarayıcılar (özellikle iOS Safari/Chrome) AudioContext'i
+    // "suspended" durumda başlatır ve kullanıcı bir yere dokunana kadar
+    // ses üretmez. Her sesten önce tekrar resume() denemek, mobilde
+    // sesin hiç çıkmaması sorununun en sık sebebini çözer.
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => {});
+    }
     return audioCtx;
   }
+  // iOS/Android'de ses (hem WebAudio hem sesli okuma) yalnızca bir
+  // kullanıcı dokunuşu/tıklaması İÇİNDE başlatılırsa kilidi açılır.
+  // Sayfa yüklenince otomatik çalan sesler (torbadan sayı çıkması gibi)
+  // bir kullanıcı jesti içinde OLMADIĞI için mobilde sessiz kalır.
+  // Bu yüzden ilk dokunuşta/tıklamada sesi ve sesli okumayı "kilidini
+  // açan" boş bir ses ile bir kez tetikliyoruz.
+  let audioUnlocked = false;
+  function unlockAudioOnce() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    const ctx = ensureAudio();
+    if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+    if (ctx) {
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.0001;
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(0);
+        osc.stop(ctx.currentTime + 0.01);
+      } catch (e) { /* no-op */ }
+    }
+    if ("speechSynthesis" in window) {
+      try {
+        const u = new SpeechSynthesisUtterance(" ");
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+      } catch (e) { /* no-op */ }
+    }
+  }
+  ["touchstart", "click"].forEach(evt => {
+    document.addEventListener(evt, unlockAudioOnce, { once: true, passive: true });
+  });
   // Sayı çağrısı sesi — önceki sürüm çok tiz (880/1320 Hz sine) geliyordu;
   // daha alçak notalar + hafif bir low-pass filtre ile yumuşak, kulak
   // tırmalamayan bir "ding" sağlanır.
