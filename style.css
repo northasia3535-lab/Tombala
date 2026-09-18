@@ -343,6 +343,33 @@ ul{list-style:none;margin:0;padding:0;}
   border:2px solid #1B140C;
   box-shadow:0 2px 3px rgba(0,0,0,.2);
 }
+/* Her oyunda kart farklı bir renk temasıyla gelir (bkz. app.js CARD_COLORS /
+   pickCardColors). Sadece BOŞ hücrelerin rengi değişir; sayı hücreleri her
+   zaman beyaz/krem kalır, böylece okunaklılık hiç bozulmaz. */
+.tombala-card.card-orange .cell.blank{
+  background:linear-gradient(160deg,#FFB877,#E8791F);
+  border:2px solid #1B140C;
+}
+.tombala-card.card-blue .cell.blank{
+  background:linear-gradient(160deg,#8FC7FF,#2E7BD6);
+  border:2px solid #1B140C;
+}
+.tombala-card.card-green .cell.blank{
+  background:linear-gradient(160deg,#A9E28C,#4C9A2A);
+  border:2px solid #1B140C;
+}
+.tombala-card.card-purple .cell.blank{
+  background:linear-gradient(160deg,#D2A8FF,#8B3FD6);
+  border:2px solid #1B140C;
+}
+.tombala-card.card-teal .cell.blank{
+  background:linear-gradient(160deg,#8CE0D6,#1E9C8C);
+  border:2px solid #1B140C;
+}
+.tombala-card.card-rose .cell.blank{
+  background:linear-gradient(160deg,#FFA6C0,#D63F72);
+  border:2px solid #1B140C;
+}
 .cell.numbered{
   cursor:pointer;
   background:linear-gradient(160deg,#ffffff,#faf6ec);
