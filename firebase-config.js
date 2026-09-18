@@ -21,11 +21,11 @@
 // =============================================================
 
 const firebaseConfig = {
-  apiKey: "BURAYA_API_KEY",
-  authDomain: "BURAYA_PROJE.firebaseapp.com",
-  databaseURL: "https://BURAYA_PROJE-default-rtdb.firebaseio.com",
-  projectId: "BURAYA_PROJE",
-  storageBucket: "BURAYA_PROJE.appspot.com",
-  messagingSenderId: "BURAYA_SENDER_ID",
-  appId: "BURAYA_APP_ID"
+  apiKey: "BURAYA_API_KEY",              // ← Firebase'deki apiKey değeriyle değiştir
+  authDomain: "BURAYA_PROJE.firebaseapp.com",       // ← authDomain ile değiştir
+  databaseURL: "https://BURAYA_PROJE-default-rtdb.firebaseio.com", // ← databaseURL ile değiştir
+  projectId: "BURAYA_PROJE",             // ← projectId ile değiştir
+  storageBucket: "BURAYA_PROJE.appspot.com",        // ← storageBucket ile değiştir
+  messagingSenderId: "BURAYA_SENDER_ID", // ← messagingSenderId ile değiştir
+  appId: "BURAYA_APP_ID"                 // ← appId ile değiştir
 };
