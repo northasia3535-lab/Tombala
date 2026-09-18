@@ -633,28 +633,64 @@
     const board = $("numberBoard");
     $("boardOwnerHint").textContent = iAmOwner ? "Sırayı sen açıyorsun" : "Sadece oda sahibi açabilir";
 
-    // basit bir diff-render: eleman sayısı tutuyorsa sadece sınıfları güncelle
-    if (board.children.length !== 90) {
-      board.innerHTML = "";
-      for (let i = 0; i < 90; i++) {
-        const tile = document.createElement("div");
-        tile.className = "tile closed";
-        tile.dataset.idx = i;
-        board.appendChild(tile);
+    if (iAmOwner) {
+      // ODA SAHİBİ: tam 90 kutulu, açılabilir torba görünümü (değişmedi).
+      board.classList.remove("number-board--simple");
+      if (board.dataset.mode !== "owner" || board.children.length !== 90) {
+        board.innerHTML = "";
+        board.dataset.mode = "owner";
+        for (let i = 0; i < 90; i++) {
+          const tile = document.createElement("div");
+          tile.className = "tile closed";
+          tile.dataset.idx = i;
+          board.appendChild(tile);
+        }
+        board.addEventListener("click", onBoardTileClick);
       }
-      board.addEventListener("click", onBoardTileClick);
+      for (let i = 0; i < 90; i++) {
+        const tile = board.children[i];
+        const isOpen = !!calledMap[i];
+        const clickable = room.status === "playing" && !isOpen;
+        tile.classList.toggle("open", isOpen);
+        tile.classList.toggle("closed", !isOpen);
+        tile.classList.toggle("clickable", clickable);
+        tile.classList.toggle("is-latest", isOpen && i === room.currentCallIndex);
+        tile.textContent = isOpen ? String(order[i]) : "";
+      }
+      return;
     }
 
-    for (let i = 0; i < 90; i++) {
-      const tile = board.children[i];
-      const isOpen = !!calledMap[i];
-      const clickable = iAmOwner && room.status === "playing" && !isOpen;
-      tile.classList.toggle("open", isOpen);
-      tile.classList.toggle("closed", !isOpen);
-      tile.classList.toggle("clickable", clickable);
-      tile.classList.toggle("is-latest", isOpen && i === room.currentCallIndex);
-      tile.textContent = isOpen ? String(order[i]) : "";
+    // KATILIMCI (oda sahibi değil): dokunamadığı 90 boş kutuyu göstermenin
+    // anlamı yok — sadece şimdiye kadar çıkan sayıları küçük, kendiliğinden
+    // büyüyen bir liste hâlinde gösteriyoruz. Bu, sabit/boş görünen büyük
+    // alanı ortadan kaldırıp ekranı sadeleştiriyor.
+    board.classList.add("number-board--simple");
+    if (board.dataset.mode !== "simple") {
+      board.innerHTML = "";
+      board.dataset.mode = "simple";
     }
+    const calledIdxSorted = Object.keys(calledMap).map(Number).sort((a, b) => a - b);
+    if (!calledIdxSorted.length) {
+      board.innerHTML = `<p class="board-empty-hint">Henüz sayı açılmadı…</p>`;
+      return;
+    }
+    if (board.dataset.mode === "simple" && board.querySelector(".board-empty-hint")) {
+      board.innerHTML = "";
+    }
+    // Mevcut chip'leri koruyup sadece eksik olanları ekleyerek gereksiz
+    // yeniden çizimden kaçınıyoruz.
+    const existing = new Set(Array.from(board.querySelectorAll(".tile")).map(el => el.dataset.idx));
+    calledIdxSorted.forEach(i => {
+      let tile = board.querySelector(`.tile[data-idx="${i}"]`);
+      if (!tile) {
+        tile = document.createElement("div");
+        tile.className = "tile open";
+        tile.dataset.idx = i;
+        tile.textContent = String(order[i]);
+        board.appendChild(tile);
+      }
+      tile.classList.toggle("is-latest", i === room.currentCallIndex);
+    });
   }
 
   function onBoardTileClick(e) {
