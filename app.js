@@ -159,6 +159,48 @@
       osc.stop(now + i * 0.09 + 0.4);
     });
   }
+  // Çinko yapıldığında çalan, sesli okumadan bağımsız, garantili bir ton
+  // üçlüsü — bazı tarayıcılarda sesli okuma (TTS) sessiz kalabildiği için
+  // bu WebAudio tonu her zaman duyulur bir bildirim sağlar.
+  function playCinkoFanfare() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    [523, 659, 784].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      const t = now + i * 0.12;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.22, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.45);
+    });
+  }
+
+  // Kazananın tüm kartını doldurduğu anda çalan, daha uzun/zengin final tonu.
+  function playWinFanfare() {
+    const ctx = ensureAudio();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    [523, 659, 784, 1047, 784, 1047].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.value = freq;
+      const t = now + i * 0.14;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.18, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.55);
+    });
+  }
+
   function speakNumber(n) {
     speakText(numberToTurkish(n));
   }
@@ -187,13 +229,13 @@
   let winOverlayShown = false;
   let winDismissedLocally = false;
 
-  function toast(msg) {
+  function toast(msg, big) {
     const layer = $("toastLayer");
     const el = document.createElement("div");
-    el.className = "toast";
+    el.className = "toast" + (big ? " toast--big" : "");
     el.textContent = msg;
     layer.appendChild(el);
-    setTimeout(() => el.remove(), 2900);
+    setTimeout(() => el.remove(), big ? 4200 : 2900);
   }
 
   function showView(name) {
@@ -768,7 +810,8 @@
           const isFull = room.winnerId && entry.playerId === room.winnerId && n === count && room.status === "finished";
           if (!isFull) {
             const ord = ordinalTurkish(n);
-            toast(`🎉 ${ord} Çinko — ${entry.playerName}!`);
+            toast(`🎉 ${ord} Çinko — ${entry.playerName}!`, true);
+            playCinkoFanfare();
             speakText(`${ord} Çinko, ${entry.playerName} yaptı!`);
           }
         }
@@ -785,6 +828,7 @@
       $("waitHostMsg").classList.toggle("hidden", iAmOwner);
       renderWinnerCardPreview(room, players[room.winnerId]);
       if (!winOverlayShown) {
+        playWinFanfare();
         speakText(`Tombala! Kazanan ${winnerLabel}!`);
       }
       if (!winDismissedLocally) {
