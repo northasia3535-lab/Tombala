@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Tombala Gecesi — Online Tombala</title>
+<meta name="description" content="Arkadaşlarınla gerçek zamanlı, çevrimiçi tombala oyna. Oda kur, kartını al, sayıları yakala!" />
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0B1F17" />
+<link rel="apple-touch-icon" href="icon-apple-touch-icon.png" />
+<link rel="icon" type="image/png" href="icon-favicon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Tombala" />
+
+<!-- Social share -->
+<meta property="og:title" content="Tombala Gecesi" />
+<meta property="og:description" content="Arkadaşlarınla gerçek zamanlı online tombala oyna." />
+<meta property="og:image" content="icon-share.png" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="felt-bg" aria-hidden="true"></div>
+
+<div id="app">
+
+  <!-- ============ TOAST / BANNER ============ -->
+  <div id="toastLayer" aria-live="polite"></div>
+
+  <!-- ============ LOBBY / GİRİŞ EKRANI ============ -->
+  <section id="view-lobby" class="view view--lobby">
+    <div class="lobby-card">
+      <header class="lobby-header">
+        <div class="lobby-badge">🎱</div>
+        <h1>Tombala Gecesi</h1>
+        <p class="lobby-sub">Arkadaşlarını odaya davet et, kartını al, sayıları yakala.</p>
+      </header>
+
+      <!-- Kullanıcı bilgileri -->
+      <div class="field">
+        <label for="nameInput">👤 Oyuncu adın</label>
+        <input id="nameInput" type="text" maxlength="16" placeholder="Örn. Yuko" autocomplete="off" />
+      </div>
+
+      <button id="btnCreateRoom" class="btn btn--create">
+        <span class="btn-emoji">🏠</span> Oda Oluştur
+      </button>
+
+      <div class="divider"><span>veya</span></div>
+
+      <div class="field">
+        <label for="codeInput">🔑 Oda kodu</label>
+        <input id="codeInput" type="text" maxlength="6" placeholder="Örn. BUQJQQ" autocomplete="off" style="text-transform:uppercase" />
+      </div>
+
+      <button id="btnJoinRoom" class="btn btn--join">
+        <span class="btn-emoji">🚪</span> Odaya Katıl
+      </button>
+
+      <p id="lobbyMsg" class="lobby-msg"></p>
+
+      <!-- Oda bilgisi & oyuncu listesi (oda kurulduktan sonra görünür) -->
+      <div id="roomPanel" class="room-panel hidden">
+        <div class="room-code-banner">
+          🎉 Oda hazır! Kod: <strong id="roomCodeText">——</strong>
+          <button id="btnCopyCode" class="mini-btn" title="Kodu kopyala">📋</button>
+        </div>
+
+        <div class="players-box">
+          <h3><span id="playerCountLabel">👥 Oyuncular (0/10)</span></h3>
+          <ul id="playersList" class="players-list"></ul>
+        </div>
+
+        <button id="btnStartMatch" class="btn btn--start" disabled>
+          ⚡ EŞLEŞMEYİ BAŞLAT ⚡
+        </button>
+        <p class="hint" id="startHint">Sadece oda sahibi oyunu başlatabilir.</p>
+      </div>
+    </div>
+    <p class="footer-credit">Tombala Gecesi · Türk tombalasının dijital hâli</p>
+  </section>
+
+  <!-- ============ OYUN EKRANI ============ -->
+  <section id="view-game" class="view view--game hidden">
+
+    <!-- ÜST BİLGİ ÇUBUĞU: kullanıcı adı + diğer bilgiler -->
+    <header class="game-topbar">
+      <div class="topbar-row">
+        <div class="me-chip">
+          <span class="me-avatar">🎫</span>
+          <span id="meName">Oyuncu</span>
+          <span id="meCrown" class="crown hidden" title="Oda sahibi">👑</span>
+        </div>
+        <div class="room-chip">
+          Oda: <strong id="gameRoomCode">——</strong>
+          <button id="btnLeaveRoom" class="mini-btn mini-btn--danger" title="Odadan çık">✕</button>
+        </div>
+      </div>
+      <div id="playersStrip" class="players-strip"></div>
+    </header>
+
+    <!-- OYUN ALANI -->
+    <main id="gameMain" class="game-main hidden">
+
+      <!-- Çağrılan sayı gösterge alanı -->
+      <div class="call-area">
+        <div class="call-area-label">SIRADAKİ SAYI</div>
+        <div id="currentCallBall" class="current-call-ball">
+          <span id="currentCallNumber">–</span>
+        </div>
+        <div id="calledHistoryStrip" class="called-history-strip"></div>
+      </div>
+
+      <!-- 90 sayılık torba tahtası -->
+      <div class="board-panel">
+        <div class="board-panel-head">
+          <span>🎰 Sayı Torbası</span>
+          <span id="boardOwnerHint" class="board-owner-hint"></span>
+        </div>
+        <div id="numberBoard" class="number-board" aria-label="90 sayılık tombala torbası"></div>
+      </div>
+
+      <!-- Oyuncunun kendi kartı -->
+      <div class="card-panel">
+        <div class="card-panel-head">
+          <span>🃏 Kartın</span>
+          <span id="myRowsProgress" class="rows-progress"></span>
+        </div>
+        <div id="myCardWrap" class="my-card-wrap">
+          <div id="myCard" class="tombala-card"></div>
+        </div>
+        <p class="hint">Torbadan çıkan bir sayı kartında varsa otomatik olarak yerleşir — hiçbir şeye dokunman gerekmez.</p>
+      </div>
+
+      <!-- Oda sahibi kontrolleri -->
+      <div id="hostControls" class="host-controls hidden">
+        <button id="btnNewGame" class="btn btn--start hidden">🔄 Yeni Oyun Başlat</button>
+      </div>
+    </main>
+
+    <!-- Çinko / kazanan tam ekran katmanı -->
+    <div id="winOverlay" class="win-overlay hidden">
+      <div class="win-card">
+        <div class="win-trophy">🏆</div>
+        <div class="win-title">TOMBALA!</div>
+        <div id="winnerName" class="win-name">—</div>
+        <p class="win-sub">Kartını tamamen doldurdu ve oyunu kazandı.</p>
+        <button id="btnNewGameOverlay" class="btn btn--start hidden">🔄 Yeni Oyun Başlat</button>
+        <p id="waitHostMsg" class="hint hidden">Yeni oyun için oda sahibi bekleniyor…</p>
+        <button id="btnCloseWinOverlay" class="btn btn--join">🚪 Odaya Dön</button>
+      </div>
+    </div>
+
+  </section>
+
+</div>
+
+<!-- Uçan sayı jetonu için sabit katman -->
+<div id="flyLayer" aria-hidden="true"></div>
+
+<!-- Firebase (gerçek zamanlı senkronizasyon için) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
